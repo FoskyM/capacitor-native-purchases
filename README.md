@@ -15,6 +15,7 @@ This plugin allows you to implement in-app purchases and subscriptions in your C
 The only **free**, **battle-tested** in-app purchase plugin for Capacitor with full feature parity:
 
 - **StoreKit 2 (iOS)** - Uses Apple's latest purchase APIs for iOS 15+
+- **iOS subscription commitment plans** - Merchandises and purchases monthly subscriptions with 12-month commitments when StoreKit supports them
 - **Google Play Billing 7.x (Android)** - Implements the newest billing library
 - **Complete feature set** - In-app products AND subscriptions with base plans
 - **Same JavaScript API** - Compatible interface with paid alternatives
@@ -92,6 +93,35 @@ Add the "In-App Purchase" capability to your Xcode project:
 > ⚠️ **App Store Requirement**: You MUST display product names and prices using data from the plugin (`product.title`, `product.priceString`). Hardcoded values will cause App Store rejection.
 
 > 📖 **[Complete iOS Testing Guide](./docs/iOS_TESTING_GUIDE.md)** - Comprehensive guide covering both Sandbox and StoreKit local testing methods with step-by-step instructions, troubleshooting, and best practices.
+
+### StoreKit Monthly Commitment Subscriptions
+
+On supported iOS versions, the plugin exposes Apple's monthly subscription with 12-month commitment billing plan configuration from StoreKit:
+
+- Show `product.pricingTerms` so users can compare the standard up-front plan and the monthly commitment plan before purchasing.
+- Pass `billingPlanType: 'monthly'` to `purchaseProduct()` when the user chooses the monthly commitment plan.
+- Read `transaction.billingPlanType`, `transaction.commitmentInfo`, and `transaction.renewalInfo.commitmentInfo` from purchases, restored purchases, and entitlement checks.
+
+```typescript
+const { products } = await NativePurchases.getProducts({
+  productIdentifiers: ['com.yourapp.premium.yearly'],
+  productType: PURCHASE_TYPE.SUBS,
+});
+
+const premiumYearly = products[0];
+const monthlyCommitment = premiumYearly.pricingTerms?.find(
+  (term) => term.billingPlanType === 'monthly'
+);
+
+if (monthlyCommitment) {
+  // Display both billingDisplayPrice and commitmentInfo.priceString before purchase.
+  await NativePurchases.purchaseProduct({
+    productIdentifier: premiumYearly.identifier,
+    productType: PURCHASE_TYPE.SUBS,
+    billingPlanType: 'monthly',
+  });
+}
+```
 
 ### Testing with Sandbox
 
