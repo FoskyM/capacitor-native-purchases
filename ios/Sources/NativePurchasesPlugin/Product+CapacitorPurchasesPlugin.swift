@@ -117,16 +117,20 @@ private extension Product.SubscriptionOffer {
 private extension Product.SubscriptionOffer.OfferType {
 
     /// Map to SKProductDiscount.Type-compatible integer values:
-    /// introductory=0, promotional=1
+    /// introductory=0, promotional=1, winBack=2
     var intValue: Int {
-        switch self {
-        case .introductory:
+        if self == .introductory {
             return 0
-        case .promotional:
-            return 1
-        default:
-            return -1
         }
+        if self == .promotional {
+            return 1
+        }
+        if #available(iOS 18.0, *), self == .winBack {
+            return 2
+        }
+
+        assertionFailure("Unknown SubscriptionOffer.OfferType: \(self)")
+        return -1
     }
 }
 
