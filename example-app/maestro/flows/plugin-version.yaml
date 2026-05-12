@@ -5,9 +5,9 @@ name: Plugin version is returned
 - waitForAnimationToEnd:
     timeout: 5000
 - extendedWaitUntil:
-    visible: "@capgo/native-purchases Example"
+    visible: "Available actions"
     timeout: 60000
-- assertVisible: "@capgo/native-purchases Example"
+- assertVisible: "Get plugin version"
 - tapOn: "Get plugin version"
 - tapOn: "Run action"
 - assertNotVisible: "Ready to run the selected action."
