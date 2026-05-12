@@ -1,0 +1,20 @@
+appId: app.capgo.nativepurchases
+name: CI smoke actions are available
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Available actions"
+    timeout: 60000
+- assertVisible: "Get plugin version"
+- tapOn: "Get plugin version"
+- tapOn: "Run action"
+- assertNotVisible: "Ready to run the selected action."
+- assertNotVisible: "Action completed."
+- assertNotVisible: "Error:"
+- assertVisible: "Check billing support"
+- tapOn: "Check billing support"
+- tapOn: "Run action"
+- assertNotVisible: "Ready to run the selected action."
+- assertNotVisible: "Action completed."
+- assertNotVisible: "Error:"
