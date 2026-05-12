@@ -362,6 +362,50 @@ export interface Transaction {
     | 'inBillingRetryPeriod'
     | 'unknown';
   /**
+   * StoreKit billing plan type for auto-renewable subscriptions.
+   *
+   * - `"upFront"`: Standard subscription billing for the full billing period.
+   * - `"monthly"`: Monthly billing with a 12-month commitment.
+   * - `"unknown"`: StoreKit returned a future or unsupported value.
+   *
+   * @since 8.3.8
+   * @platform ios Present for StoreKit transactions that include billing plan metadata.
+   * @platform android Not available
+   */
+  readonly billingPlanType?: SubscriptionBillingPlanType;
+  /**
+   * Commitment metadata for monthly subscriptions with a 12-month commitment.
+   *
+   * Use `expirationDate` here only to display commitment progress. Continue using
+   * the top-level `expirationDate` to decide whether the current billing period
+   * grants entitlement access.
+   *
+   * @since 8.3.8
+   * @platform ios Present for monthly commitment subscription transactions.
+   * @platform android Not available
+   */
+  readonly commitmentInfo?: TransactionCommitmentInfo;
+  /**
+   * StoreKit renewal metadata for auto-renewable subscriptions.
+   *
+   * `willAutoRenew` here describes the next billing period. For monthly
+   * commitment subscriptions, `commitmentInfo.willAutoRenew` describes whether
+   * the next 12-month commitment renews after the current commitment ends.
+   *
+   * @since 8.3.8
+   * @platform ios Present for verified subscription renewal info.
+   * @platform android Not available
+   */
+  readonly renewalInfo?: SubscriptionRenewalInfo;
+  /**
+   * Currency code associated with StoreKit transaction pricing metadata.
+   *
+   * @since 8.3.8
+   * @platform ios Present when StoreKit includes currency in the transaction payload.
+   * @platform android Not available
+   */
+  readonly currencyCode?: string;
+  /**
    * Purchase state of the transaction (numeric string value).
    *
    * **Android Values:**
@@ -642,7 +686,162 @@ export interface SubscriptionPeriod {
    * The Subscription Period unit.
    */
   readonly unit: number;
+  /**
+   * Human-readable subscription period unit.
+   *
+   * @since 8.3.8
+   */
+  readonly unitString?: 'day' | 'week' | 'month' | 'year' | 'unknown';
 }
+
+export type SubscriptionBillingPlanType = 'upFront' | 'monthly' | 'unknown';
+
+export interface ProductCommitmentInfo {
+  /**
+   * Total commitment price in the local currency.
+   */
+  readonly price?: number;
+  /**
+   * Formatted total commitment price.
+   */
+  readonly priceString?: string;
+  /**
+   * Full commitment period.
+   */
+  readonly period?: SubscriptionPeriod;
+}
+
+export interface SubscriptionPricingTerms {
+  /**
+   * Billing plan represented by this pricing entry.
+   */
+  readonly billingPlanType?: SubscriptionBillingPlanType;
+  /**
+   * Total commitment details for this billing plan.
+   */
+  readonly commitmentInfo?: ProductCommitmentInfo;
+  /**
+   * Formatted price for each billing period.
+   */
+  readonly billingDisplayPrice?: string;
+  /**
+   * Numeric price for each billing period.
+   */
+  readonly billingPrice?: number;
+  /**
+   * Duration of each billing period.
+   */
+  readonly billingPeriod?: SubscriptionPeriod;
+  /**
+   * StoreKit subscription offers that apply to this billing plan.
+   */
+  readonly subscriptionOffers?: StoreKitSubscriptionOffer[];
+}
+
+export interface StoreKitSubscriptionOffer {
+  /**
+   * StoreKit offer identifier.
+   */
+  readonly identifier?: string;
+  /**
+   * StoreKit offer type.
+   */
+  readonly type?: string;
+  /**
+   * Offer price in the local currency.
+   */
+  readonly price?: number;
+  /**
+   * Formatted offer price.
+   */
+  readonly priceString?: string;
+  /**
+   * Offer billing period.
+   */
+  readonly period?: SubscriptionPeriod;
+  /**
+   * Number of periods the offer applies to.
+   */
+  readonly periodCount?: number;
+  /**
+   * StoreKit offer payment mode.
+   */
+  readonly paymentMode?: string;
+}
+
+export interface TransactionCommitmentInfo {
+  /**
+   * Current billing period number within the commitment.
+   */
+  readonly billingPeriodNumber?: number;
+  /**
+   * Total number of billing periods in the commitment.
+   */
+  readonly totalBillingPeriods?: number;
+  /**
+   * End of the full commitment, in ISO 8601 format.
+   */
+  readonly expirationDate?: string;
+  /**
+   * Total commitment price in the local currency.
+   */
+  readonly price?: number;
+}
+
+export interface RenewalCommitmentInfo {
+  /**
+   * Product StoreKit will renew into after the commitment ends.
+   */
+  readonly autoRenewProductId?: string;
+  /**
+   * Whether the subscription renews into another commitment after the current commitment ends.
+   */
+  readonly willAutoRenew?: boolean;
+  /**
+   * Billing plan StoreKit will use for the next commitment or renewal.
+   */
+  readonly renewalBillingPlanType?: SubscriptionBillingPlanType;
+  /**
+   * Renewal date for the next commitment or renewal, in ISO 8601 format.
+   */
+  readonly renewalDate?: string;
+  /**
+   * Renewal price in the local currency.
+   */
+  readonly renewalPrice?: number;
+}
+
+export interface SubscriptionRenewalInfo {
+  /**
+   * Whether the next billing period will renew.
+   */
+  readonly willAutoRenew?: boolean;
+  /**
+   * Product StoreKit will renew into for the next billing period.
+   */
+  readonly autoRenewProductId?: string;
+  /**
+   * Billing plan StoreKit will use for the next billing period.
+   */
+  readonly renewalBillingPlanType?: SubscriptionBillingPlanType;
+  /**
+   * Next billing period renewal date, in ISO 8601 format.
+   */
+  readonly renewalDate?: string;
+  /**
+   * Next billing period renewal price in the local currency.
+   */
+  readonly renewalPrice?: number;
+  /**
+   * Currency code for renewal pricing metadata.
+   */
+  readonly currencyCode?: string;
+  /**
+   * Commitment renewal metadata for monthly subscriptions with a 12-month commitment.
+   */
+  readonly commitmentInfo?: RenewalCommitmentInfo;
+}
+
 export interface SKProductDiscount {
   /**
    * The Product discount identifier.
@@ -736,6 +935,19 @@ export interface Product {
    * Android subscriptions only: offer identifier (null/undefined for base offers).
    */
   readonly offerId?: string | null;
+  /**
+   * iOS subscriptions only: StoreKit pricing terms by billing plan.
+   *
+   * For subscriptions with a monthly billing plan and 12-month commitment, this
+   * includes both the standard up-front plan and the monthly commitment plan.
+   * Display both `billingDisplayPrice` and `commitmentInfo.priceString` before
+   * starting a monthly commitment purchase.
+   *
+   * @since 8.3.8
+   * @platform ios Present on supported StoreKit subscription products.
+   * @platform android Not available
+   */
+  readonly pricingTerms?: SubscriptionPricingTerms[];
   /**
    * The Product subscription group identifier.
    */
@@ -842,6 +1054,7 @@ export interface NativePurchasesPlugin {
    * @param options.productType - Only Android, the type of product, can be inapp or subs. Will use inapp by default.
    * @param options.planIdentifier - Only Android, the identifier of the base plan you want to purchase from Google Play Console. REQUIRED for Android subscriptions, ignored on iOS.
    * @param options.quantity - Only iOS, the number of items you wish to purchase. Will use 1 by default.
+   * @param options.billingPlanType - Only iOS, the StoreKit subscription billing plan to purchase. Use `"monthly"` for a monthly subscription with a 12-month commitment. Requires iOS 26.4+ and Xcode 26.5 SDK support.
    * @param options.appAccountToken - Optional identifier uniquely associated with the user's account in your app.
    *                                  PLATFORM REQUIREMENTS:
    *                                  - iOS: Must be a valid UUID format (StoreKit 2 requirement)
@@ -858,6 +1071,7 @@ export interface NativePurchasesPlugin {
     planIdentifier?: string;
     productType?: PURCHASE_TYPE;
     quantity?: number;
+    billingPlanType?: 'monthly' | 'upFront';
     appAccountToken?: string;
     isConsumable?: boolean;
     autoAcknowledgePurchases?: boolean;
