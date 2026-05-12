@@ -56,6 +56,37 @@ internal class TransactionHelpers {
         if let token = transaction.appAccountToken {
             response["appAccountToken"] = token.uuidString
         }
+
+        addStoreKitJSONDetails(to: &response, transaction: transaction)
+    }
+
+    private static func addStoreKitJSONDetails(to response: inout [String: Any], transaction: Transaction) {
+        if let transactionJSON = StoreKitPayloadHelpers.jsonDictionary(from: transaction.jsonRepresentation) {
+            if let billingPlanType = StoreKitPayloadHelpers.normalizedBillingPlanType(
+                from: transactionJSON["billingPlanType"]
+            ) {
+                response["billingPlanType"] = billingPlanType
+            }
+            if let commitmentInfo = StoreKitPayloadHelpers.transactionCommitmentInfo(
+                from: transactionJSON["commitmentInfo"]
+            ) {
+                response["commitmentInfo"] = commitmentInfo
+            }
+            if let currency = transactionJSON["currency"] as? String {
+                response["currencyCode"] = currency
+            }
+        }
+
+        #if STOREKIT_26_5
+        if #available(iOS 26.4, *) {
+            if let billingPlanType = transaction.billingPlanType {
+                response["billingPlanType"] = billingPlanType.capacitorString
+            }
+            if let commitmentInfo = transaction.commitmentInfo {
+                response["commitmentInfo"] = commitmentInfo.dictionary
+            }
+        }
+        #endif
     }
 
     static func getReceiptData() -> String? {
@@ -88,12 +119,31 @@ internal class TransactionHelpers {
         if subscriptionStatus.state == .subscribed {
             if case .verified(let value) = subscriptionStatus.renewalInfo {
                 response["willCancel"] = !value.willAutoRenew
+                response["renewalInfo"] = renewalInfoDictionary(from: value)
             } else {
                 response["willCancel"] = NSNull()
             }
         } else {
             response["willCancel"] = NSNull()
         }
+    }
+
+    private static func renewalInfoDictionary(
+        from renewalInfo: Product.SubscriptionInfo.RenewalInfo
+    ) -> [String: Any] {
+        let renewalJSON = StoreKitPayloadHelpers.jsonDictionary(from: renewalInfo.jsonRepresentation)
+        var dictionary = StoreKitPayloadHelpers.renewalInfo(
+            from: renewalJSON,
+            fallbackWillAutoRenew: renewalInfo.willAutoRenew
+        ) ?? ["willAutoRenew": renewalInfo.willAutoRenew]
+
+        #if STOREKIT_26_5
+        if #available(iOS 26.4, *), let commitmentInfo = renewalInfo.commitmentInfo {
+            dictionary["commitmentInfo"] = commitmentInfo.dictionary
+        }
+        #endif
+
+        return dictionary
     }
 
     static func collectAllPurchases(appAccountTokenFilter: String?, onlyCurrentEntitlements: Bool = false) async throws -> [[String: Any]] {

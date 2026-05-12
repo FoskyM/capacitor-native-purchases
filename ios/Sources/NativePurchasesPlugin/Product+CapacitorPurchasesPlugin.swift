@@ -39,7 +39,7 @@ extension Product {
         //         * The Product discounts list.
         //         */
         //        readonly discounts: SKProductDiscount[];
-        return [
+        var product: [String: Any] = [
             "identifier": self.id,
             "description": self.description,
             "title": self.displayName,
@@ -48,5 +48,27 @@ extension Product {
             "currencyCode": self.priceFormatStyle.currencyCode,
             "isFamilyShareable": self.isFamilyShareable
         ]
+
+        if let subscription = self.subscription {
+            product["subscriptionGroupIdentifier"] = subscription.subscriptionGroupID
+            product["subscriptionPeriod"] = StoreKitPayloadHelpers.periodDictionary(
+                unit: subscription.subscriptionPeriod.unit,
+                value: subscription.subscriptionPeriod.value
+            )
+        }
+
+        #if STOREKIT_26_5
+        if #available(iOS 26.4, *), let pricingTerms = self.subscription?.pricingTerms {
+            product["pricingTerms"] = pricingTerms.map { $0.dictionary }
+        }
+        #endif
+
+        if product["pricingTerms"] == nil,
+           let productJSON = StoreKitPayloadHelpers.jsonDictionary(from: self.jsonRepresentation),
+           let pricingTerms = StoreKitPayloadHelpers.pricingTerms(from: productJSON) {
+            product["pricingTerms"] = pricingTerms
+        }
+
+        return product
     }
 }

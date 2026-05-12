@@ -7,20 +7,28 @@ export class NativePurchasesWeb extends WebPlugin implements NativePurchasesPlug
     console.error('restorePurchases only mocked in web');
   }
 
-  async getProducts(options: { productIdentifiers: string[] }): Promise<{ products: Product[] }> {
+  async getProducts(options: {
+    productIdentifiers: string[];
+    productType?: PURCHASE_TYPE;
+  }): Promise<{ products: Product[] }> {
     console.error('getProducts only mocked in web ' + options);
     return { products: [] };
   }
 
-  async getProduct(options: { productIdentifier: string }): Promise<{ product: Product }> {
+  async getProduct(options: { productIdentifier: string; productType?: PURCHASE_TYPE }): Promise<{ product: Product }> {
     console.error('getProduct only mocked in web ' + options);
     return { product: {} as any };
   }
 
   async purchaseProduct(options: {
     productIdentifier: string;
-    planIdentifier: string;
-    quantity: number;
+    planIdentifier?: string;
+    productType?: PURCHASE_TYPE;
+    quantity?: number;
+    billingPlanType?: 'monthly' | 'upFront';
+    appAccountToken?: string;
+    isConsumable?: boolean;
+    autoAcknowledgePurchases?: boolean;
   }): Promise<Transaction> {
     console.error('purchaseProduct only mocked in web' + options);
     return { transactionId: 'transactionId' } as any;
@@ -34,7 +42,11 @@ export class NativePurchasesWeb extends WebPlugin implements NativePurchasesPlug
     console.warn('Cannot get plugin version in web');
     return { version: 'default' };
   }
-  async getPurchases(options?: { productType?: PURCHASE_TYPE }): Promise<{ purchases: Transaction[] }> {
+  async getPurchases(options?: {
+    productType?: PURCHASE_TYPE;
+    appAccountToken?: string;
+    onlyCurrentEntitlements?: boolean;
+  }): Promise<{ purchases: Transaction[] }> {
     console.error('getPurchases only mocked in web ' + options);
     return { purchases: [] };
   }
@@ -42,11 +54,13 @@ export class NativePurchasesWeb extends WebPlugin implements NativePurchasesPlug
     console.error('manageSubscriptions only mocked in web');
   }
 
-  async acknowledgePurchase(_options: { purchaseToken: string }): Promise<void> {
+  async acknowledgePurchase(options: { purchaseToken: string }): Promise<void> {
+    void options;
     console.error('acknowledgePurchase only mocked in web');
   }
 
-  async consumePurchase(_options: { purchaseToken: string }): Promise<void> {
+  async consumePurchase(options: { purchaseToken: string }): Promise<void> {
+    void options;
     throw new Error('consumePurchase is only available on Android');
   }
 
@@ -63,10 +77,11 @@ export class NativePurchasesWeb extends WebPlugin implements NativePurchasesPlug
     };
   }
 
-  async isEntitledToOldBusinessModel(_options: {
+  async isEntitledToOldBusinessModel(options: {
     targetVersion?: string;
     targetBuildNumber?: string;
   }): Promise<{ isOlderVersion: boolean; originalAppVersion: string }> {
+    void options;
     console.error('isEntitledToOldBusinessModel only mocked in web');
     return {
       isOlderVersion: false,

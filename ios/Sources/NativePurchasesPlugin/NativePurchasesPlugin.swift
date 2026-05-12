@@ -76,6 +76,7 @@ public class NativePurchasesPlugin: CAPPlugin, CAPBridgedPlugin {
         let productIdentifier = call.getString("productIdentifier", "")
         let quantity = call.getInt("quantity", 1)
         let appAccountToken = call.getString("appAccountToken")
+        let billingPlanType = call.getString("billingPlanType")
         let autoAcknowledge = call.getBool("autoAcknowledgePurchases") ?? true
 
         if productIdentifier.isEmpty {
@@ -98,6 +99,15 @@ public class NativePurchasesPlugin: CAPPlugin, CAPBridgedPlugin {
                 if let token = appAccountToken, !token.isEmpty, let uuid = UUID(uuidString: token) {
                     purchaseOptions.insert(.appAccountToken(uuid))
                 }
+                switch self.billingPlanPurchaseOption(from: billingPlanType) {
+                case .none:
+                    break
+                case .option(let option):
+                    purchaseOptions.insert(option)
+                case .failure(let message):
+                    call.reject(message)
+                    return
+                }
 
                 let result = try await product.purchase(options: purchaseOptions)
                 print("purchaseProduct result \(result)")
@@ -106,39 +116,6 @@ public class NativePurchasesPlugin: CAPPlugin, CAPBridgedPlugin {
                 print(error)
                 call.reject(error.localizedDescription)
             }
-        }
-    }
-
-    @MainActor
-    private func handlePurchaseResult(
-        _ result: Product.PurchaseResult,
-        call: CAPPluginCall,
-        autoFinish: Bool
-    ) async {
-        switch result {
-        case let .success(verificationResult):
-            switch verificationResult {
-            case .verified(let transaction):
-                let response = await TransactionHelpers.buildTransactionResponse(
-                    from: transaction,
-                    jwsRepresentation: verificationResult.jwsRepresentation
-                )
-                if autoFinish {
-                    print("Auto-finishing transaction: \(transaction.id)")
-                    await transaction.finish()
-                } else {
-                    print("Manual finish required for transaction: \(transaction.id)")
-                }
-                call.resolve(response)
-            case .unverified(_, let error):
-                call.reject(error.localizedDescription)
-            }
-        case .pending:
-            call.reject("Transaction pending")
-        case .userCancelled:
-            call.reject("User cancelled")
-        @unknown default:
-            call.reject("Unknown error")
         }
     }
 
@@ -277,6 +254,35 @@ public class NativePurchasesPlugin: CAPPlugin, CAPBridgedPlugin {
         call.reject("consumePurchase is only available on Android")
     }
 
+}
+
+private enum BillingPlanPurchaseOptionResult {
+    case none
+    case option(Product.PurchaseOption)
+    case failure(String)
+}
+
+private extension NativePurchasesPlugin {
+    func billingPlanPurchaseOption(from billingPlanType: String?) -> BillingPlanPurchaseOptionResult {
+        guard let billingPlanType = billingPlanType, !billingPlanType.isEmpty else {
+            return .none
+        }
+        guard let normalizedBillingPlanType = StoreKitPayloadHelpers.purchaseBillingPlanType(from: billingPlanType) else {
+            return .failure("billingPlanType must be monthly or upFront")
+        }
+        guard #available(iOS 26.4, *) else {
+            return .failure("billingPlanType requires iOS 26.4 or later")
+        }
+
+        #if STOREKIT_26_5
+        if let option = Product.PurchaseOption.capacitorBillingPlanType(normalizedBillingPlanType) {
+            return .option(option)
+        }
+        return .failure("billingPlanType must be monthly or upFront")
+        #else
+        return .failure("billingPlanType requires building with Xcode 26.5 SDK or later")
+        #endif
+    }
 }
 
 // MARK: - iOS 16+ App Transaction Methods
