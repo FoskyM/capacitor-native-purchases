@@ -4,12 +4,18 @@ import PackageDescription
 
 func hasStoreKit265SDK() -> Bool {
     let environment = ProcessInfo.processInfo.environment
-    let developerDir = environment["DEVELOPER_DIR"] ?? "/Applications/Xcode.app/Contents/Developer"
-    let sdkRoots = [
-        environment["SDKROOT"],
-        "\(developerDir)/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk",
-        "\(developerDir)/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk"
+    let developerDirs = [
+        environment["DEVELOPER_DIR"],
+        "/Applications/Xcode.app/Contents/Developer"
     ].compactMap { $0 }
+    var sdkRoots = [environment["SDKROOT"]].compactMap { $0 }
+
+    for developerDir in developerDirs {
+        sdkRoots.append(contentsOf: [
+            "\(developerDir)/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk",
+            "\(developerDir)/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk"
+        ])
+    }
 
     for sdkRoot in sdkRoots {
         let modulePath = "\(sdkRoot)/System/Library/Frameworks/StoreKit.framework/Modules/StoreKit.swiftmodule"

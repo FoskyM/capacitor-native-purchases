@@ -274,6 +274,8 @@ internal enum StoreKitPayloadHelpers {
         }
 
         let captures = ["year", "month", "week", "day"]
+        var foundPeriod: [String: Any]?
+
         for index in 1...4 {
             let range = match.range(at: index)
             guard range.location != NSNotFound,
@@ -283,14 +285,18 @@ internal enum StoreKitPayloadHelpers {
             }
 
             let unitString = captures[index - 1]
-            return [
+            guard foundPeriod == nil else {
+                return nil
+            }
+
+            foundPeriod = [
                 "numberOfUnits": numberOfUnits,
                 "unit": unitInteger(from: unitString),
                 "unitString": unitString
             ]
         }
 
-        return nil
+        return foundPeriod
     }
 
     private static func findArray(named name: String, in value: Any) -> [Any]? {

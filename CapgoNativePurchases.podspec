@@ -3,11 +3,18 @@ require 'json'
 package = JSON.parse(File.read(File.join(__dir__, 'package.json')))
 
 def has_storekit_265_sdk?
-  sdk_roots = [
-    ENV['SDKROOT'],
-    ENV['DEVELOPER_DIR'] && File.join(ENV['DEVELOPER_DIR'], 'Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk'),
-    '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk'
+  developer_dirs = [
+    ENV['DEVELOPER_DIR'],
+    '/Applications/Xcode.app/Contents/Developer'
   ].compact
+  sdk_roots = [ENV['SDKROOT']].compact
+
+  developer_dirs.each do |developer_dir|
+    sdk_roots.concat([
+      File.join(developer_dir, 'Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk'),
+      File.join(developer_dir, 'Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk')
+    ])
+  end
 
   sdk_roots.any? do |sdk_root|
     module_path = File.join(
